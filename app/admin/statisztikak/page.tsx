@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { desc, eq, gte, sql } from 'drizzle-orm'
-import { BarChart3, Database, Phone } from 'lucide-react'
+import { ArrowLeft, BarChart3, Phone } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { phoneLeadEvents, professionals } from '@/lib/db/schema'
@@ -35,7 +35,7 @@ export default async function StatisticsPage() {
             <h1 className="text-balance font-sans text-3xl font-black sm:text-5xl">Statisztikák</h1>
             <p className="text-base leading-relaxed text-muted-foreground">Telefonhívási érdeklődések az elmúlt 30 napban.</p>
           </div>
-          <Link href="/admin" className="btn-outline"><Database aria-hidden="true" /> Adatbázis</Link>
+          <Link href="/admin" className="btn-outline"><ArrowLeft aria-hidden="true" /> Vissza a Vezérlőpultra</Link>
         </header>
 
         <section className="overflow-hidden rounded-2xl border border-border bg-card">

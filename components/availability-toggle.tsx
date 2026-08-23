@@ -30,17 +30,34 @@ export function AvailabilityToggle({ initialAvailable }: { initialAvailable: boo
 
   const Icon = available ? CheckCircle2 : Clock3
 
-  return <section aria-labelledby="availability-title" className={`rounded-3xl border p-5 shadow-[0_1px_2px_rgb(18_32_51/0.05),0_10px_28px_rgb(18_32_51/0.1)] ${available ? 'border-emerald-600/40 bg-emerald-500/10' : 'border-amber-600/40 bg-amber-500/10'}`}>
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-start gap-3">
-        <span className={`flex size-12 shrink-0 items-center justify-center rounded-2xl ${available ? 'bg-emerald-600 text-primary-foreground' : 'bg-amber-500 text-foreground'}`}><Icon className="size-6" aria-hidden="true" /></span>
-        <div><h2 id="availability-title" className="text-xl font-black text-foreground">Aktuális elérhetőség</h2><p className="mt-1 text-sm leading-relaxed text-muted-foreground">Egy kattintással jelezheti az ügyfeleknek, hogy tud-e új munkát vállalni.</p></div>
+  return (
+    <section aria-labelledby="availability-title" className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-4">
+          <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${available ? 'bg-emerald-600/10 text-emerald-700' : 'bg-muted text-muted-foreground'}`}>
+            <Icon className="size-5" aria-hidden="true" />
+          </span>
+          <div className="flex flex-col gap-1">
+            <h2 id="availability-title" className="text-lg font-bold tracking-tight">Aktuális elérhetőség</h2>
+            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">Jelezze az ügyfeleknek, hogy jelenleg tud-e új munkát vállalni.</p>
+            <p className={`text-sm font-bold ${available ? 'text-emerald-700' : 'text-muted-foreground'}`} aria-live="polite">
+              {pending ? 'Frissítés…' : available ? 'Szabad vagyok' : 'Foglalt'}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-label="Aktuális elérhetőség módosítása"
+          aria-checked={available}
+          onClick={toggle}
+          disabled={pending}
+          className={`relative h-8 w-14 shrink-0 rounded-full border p-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:cursor-wait disabled:opacity-60 ${available ? 'border-emerald-600 bg-emerald-600' : 'border-border bg-muted'}`}
+        >
+          <span aria-hidden="true" className={`block size-5 rounded-full bg-background shadow-sm transition-transform duration-200 ease-out ${available ? 'translate-x-6' : 'translate-x-0'}`} />
+        </button>
       </div>
-      <button type="button" role="switch" aria-checked={available} onClick={toggle} disabled={pending} className={`inline-flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl px-5 text-base font-black shadow-md transition-[transform,opacity] active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 sm:w-64 ${available ? 'bg-emerald-600 text-primary-foreground' : 'bg-amber-500 text-foreground'}`}>
-        <span>{available ? 'Szabad vagyok' : 'Jelenleg elfoglalt'}</span><span aria-hidden="true" className={`relative h-7 w-12 rounded-full bg-background/50 after:absolute after:top-1 after:size-5 after:rounded-full after:bg-foreground after:transition-transform ${available ? 'after:translate-x-6' : 'after:translate-x-1'}`} />
-      </button>
-    </div>
-    <p className="mt-3 text-sm font-bold" aria-live="polite">{pending ? 'Frissítés…' : available ? 'A keresőben Szabad állapottal jelenik meg.' : 'A keresőben Elfoglalt állapottal jelenik meg.'}</p>
-    {error && <p role="alert" className="mt-2 text-sm font-bold text-destructive">{error}</p>}
-  </section>
+      {error && <p role="alert" className="mt-3 text-sm font-bold text-destructive">{error}</p>}
+    </section>
+  )
 }

@@ -1,28 +1,36 @@
 import type { Metadata } from 'next'
-import { ChevronDown, CircleHelp, UserRound, Wrench } from 'lucide-react'
+import { ChevronDown, CircleHelp, KeyRound, UserRound, Wrench } from 'lucide-react'
 import { AppShell } from '@/components/app-shell'
 
 export const metadata: Metadata = {
   title: 'GYIK / Segítség',
-  description: 'Válaszok a Mesterek alkalmazás használatával, az SOS gyorsszolgálattal és a szakember-regisztrációval kapcsolatos gyakori kérdésekre.',
+  description: 'Válaszok a Mesterek weboldal használatával, az SOS gyorsszolgálattal és a szakember-regisztrációval kapcsolatos gyakori kérdésekre.',
 }
 
 const customerQuestions = [
   {
-    question: 'Mennyibe kerül az applikáció használata?',
-    answer: 'Az applikáció használata a felhasználók számára teljesen díjmentes. Nem számítunk fel közvetítői díjat a keresésért vagy a kapcsolatfelvételért.',
+    question: 'Mennyibe kerül az oldal használata?',
+    answer: 'A weboldal használata a felhasználók számára teljesen díjmentes. Nem számítunk fel közvetítői díjat a keresésért vagy a kapcsolatfelvételért.',
   },
   {
     question: 'Hogyan biztosítják a szakemberek megbízhatóságát?',
-    answer: 'Minden regisztrált szakembert ellenőrzünk a megjelenés előtt. Az értékelések és visszajelzések szintén segítenek a magas minőség fenntartásában.',
+    answer: 'Minden regisztrált szakembert ellenőrzünk a megjelenés előtt, és csak valós, működő vállalkozásokat engedünk a platformra. A hozzánk beérkező visszajelzéseket folyamatosan figyeljük.',
   },
   {
     question: 'Mit tegyek, ha sürgős segítségre van szükségem (pl. csőtörés)?',
     answer: 'Használja a főoldalon található „SOS Gyorsszolgálat 0–24” gombot, amellyel azonnal elérheti a környékbeli ügyeletes szakembereket.',
   },
   {
-    question: 'Lehet-e közvetlenül az appon keresztül fizetni?',
-    answer: 'A Mesterek app egy közvetítő platform: a szakemberrel való elszámolás minden esetben közvetlenül a mester és a megrendelő között történik.',
+    question: 'Lehet-e közvetlenül az oldalon keresztül fizetni?',
+    answer: 'A Mesterek.eu egy közvetítő platform: a szakemberrel való elszámolás minden esetben közvetlenül a mester és a megrendelő között történik.',
+  },
+  {
+    question: 'Hogyan tudom felvenni a kapcsolatot a kiválasztott szakemberrel?',
+    answer: "Miután megtaláltad a megfelelő szakembert, a profilján található 'Hívás most' vagy 'WhatsApp' gombokkal közvetlenül felveheted vele a kapcsolatot. Rendszerünk nem közvetít, te egyenesen a mesterrel beszélsz.",
+  },
+  {
+    question: 'A szakemberek adnak számlát és garanciát?',
+    answer: 'A szakemberek saját vállalkozásként működnek, így a számlázás és a garanciavállalás az ő kötelességük. Javasoljuk, hogy a munka megkezdése előtt ezt mindig tisztázd a szakemberrel.',
   },
 ]
 
@@ -39,6 +47,41 @@ const contractorQuestions = [
     question: 'Módosíthatom később a profilomat és az adataimat?',
     answer: 'Igen, az „Adminisztráció” menüpont alatt bármikor frissítheti elérhetőségeit vagy tevékenységi köreit.',
   },
+  {
+    question: 'Kell jutalékot fizetnem az elvégzett munkák után az oldalnak?',
+    answer: 'Nem! A Mesterek.eu nem von le semmilyen jutalékot a munkáid után. A megrendelővel te egyezel meg, és a teljes bevétel a tiéd marad.',
+  },
+  {
+    question: 'Hogyan kerülhetek előrébb a találati listában?',
+    answer: 'A találati sorrendet a profilod kitöltöttsége és a Kiemelt Mester előfizetés befolyásolja. A kiemelt szakemberek a találati lista élén, hangsúlyos megjelenéssel szerepelnek.',
+  },
+  {
+    question: 'Szüneteltethetem a profilomat, ha túl sok a munkám?',
+    answer: 'Igen, a profilod beállításaiban bármikor inaktívra állíthatod magad. Ilyenkor ideiglenesen nem jelensz meg a keresőkben, amíg újra be nem kapcsolod.',
+  },
+  {
+    question: 'Mennyibe kerül a Mesterek.eu használata?',
+    answer: 'A regisztráció ingyenes. A Kiemelt Mester előfizetés díja havi fix összeg, rejtett költségek és jutalékok nélkül.',
+  },
+  {
+    question: 'Hogyan működik az ajánlóprogram (ingyen hónap)?',
+    answer: 'Minden szakember kap egy egyedi meghívó linket. Ha ezen keresztül regisztrál egy kollégája, és a 60 napos próbaidő letelte után az új tag első havi (vagy éves) díja sikeresen levonásra kerül, a rendszer automatikusan jóváír mindkettőtöknek +1 hónap ingyenes előfizetést. Nincs limit, minél több fizető kollégát hozol, annál tovább használod ingyen a platformot!',
+  },
+]
+
+const passwordQuestions = [
+  {
+    question: 'Hogyan tudom megváltoztatni a jelszavamat?',
+    answer: 'Jelenleg biztonsági okokból a bejelentkezési képernyőn az „Elfelejtett jelszó” funkcióval tud új jelszót igényelni.',
+  },
+  {
+    question: 'Mi a teendő, ha elfelejtettem a jelszavamat?',
+    answer: 'Kattintson az „Elfelejtett jelszó” gombra a belépésnél, és küldünk egy biztonsági linket.',
+  },
+  {
+    question: 'Milyen egy erős jelszó?',
+    answer: 'Legalább 12 karakter hosszú, tartalmaz kis- és nagybetűt, valamint számot.',
+  },
 ]
 
 type FaqSectionProps = {
@@ -46,17 +89,20 @@ type FaqSectionProps = {
   description: string
   questions: typeof customerQuestions
   icon: typeof UserRound
+  id?: string
 }
 
-function FaqSection({ title, description, questions, icon: Icon }: FaqSectionProps) {
+function FaqSection({ title, description, questions, icon: Icon, id }: FaqSectionProps) {
+  const titleId = id ? `${id}-title` : `${title}-title`
+
   return (
-    <section aria-labelledby={`${title}-title`} className="flex flex-col gap-5">
+    <section id={id} aria-labelledby={titleId} className="scroll-mt-24 flex flex-col gap-5">
       <div className="flex items-start gap-4">
         <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
           <Icon className="size-6" aria-hidden="true" />
         </span>
         <div>
-          <h2 id={`${title}-title`} className="text-2xl font-black text-foreground md:text-3xl">{title}</h2>
+          <h2 id={titleId} className="text-2xl font-black text-foreground md:text-3xl">{title}</h2>
           <p className="mt-1 text-pretty leading-relaxed text-muted-foreground">{description}</p>
         </div>
       </div>
@@ -91,6 +137,7 @@ export default function HelpPage() {
         <div className="mt-10 flex flex-col gap-12">
           <FaqSection title="Ügyfeleknek" description="Minden, amit a keresésről, a kapcsolatfelvételről és az SOS szolgáltatásról tudni érdemes." questions={customerQuestions} icon={UserRound} />
           <FaqSection title="Szakembereknek" description="Hasznos tudnivalók a regisztrációról, profilkezelésről és az SOS listáról." questions={contractorQuestions} icon={Wrench} />
+          <FaqSection id="jelszavak" title="Jelszó és fiókbiztonság" description="Segítség a jelszó módosításához, visszaállításához és egy erős jelszó kiválasztásához." questions={passwordQuestions} icon={KeyRound} />
         </div>
       </main>
     </AppShell>

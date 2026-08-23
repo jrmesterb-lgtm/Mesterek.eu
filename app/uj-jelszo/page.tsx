@@ -1,6 +1,9 @@
 import Link from 'next/link'
+import { and, eq, gt } from 'drizzle-orm'
 import { AppShell } from '@/components/app-shell'
 import { ResetPasswordForm } from '@/components/reset-password-form'
+import { db } from '@/lib/db'
+import { user, verification } from '@/lib/db/schema'
 
 export const metadata = {
   title: 'Új jelszó | Mesterek',
@@ -8,9 +11,20 @@ export const metadata = {
   robots: { index: false, follow: false },
 }
 
-export default async function NewPasswordPage({ searchParams }: { searchParams: Promise<{ token?: string; error?: string }> }) {
-  const { token, error } = await searchParams
-  const invalid = error === 'INVALID_TOKEN' || !token
+export default async function NewPasswordPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
+  const { token } = await searchParams
+  const [activeToken] = token
+    ? await db
+        .select({ id: verification.id, email: user.email })
+        .from(verification)
+        .innerJoin(user, eq(user.id, verification.value))
+        .where(and(
+          eq(verification.identifier, `reset-password:${token}`),
+          gt(verification.expiresAt, new Date()),
+        ))
+        .limit(1)
+    : []
+  const invalid = !token || !activeToken
 
   return (
     <AppShell>
@@ -24,7 +38,7 @@ export default async function NewPasswordPage({ searchParams }: { searchParams: 
               <Link href="/elfelejtett-jelszo" className="btn-primary w-full">Új hivatkozás kérése</Link>
             </div>
           ) : (
-            <div className="mt-7"><ResetPasswordForm token={token} /></div>
+            <div className="mt-7"><ResetPasswordForm token={token} email={activeToken.email} /></div>
           )}
         </div>
       </section>

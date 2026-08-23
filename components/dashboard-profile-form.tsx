@@ -1,7 +1,6 @@
 'use client'
 
 import { useActionState, useState } from 'react'
-import Link from 'next/link'
 import { CheckCircle2, Loader2, Save } from 'lucide-react'
 import { updateProfile } from '@/app/dashboard/actions'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -95,10 +94,6 @@ export function DashboardProfileForm({ profile, featured }: { profile: Profile; 
           </>
         )}
       </FieldGroup>
-      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-secondary p-4 text-sm leading-relaxed">
-        <input name="accepted" type="checkbox" className="mt-1 size-5 shrink-0 accent-primary" required />
-        <span>Elfogadom a jelenlegi <Link href="/aszf" className="font-bold text-primary underline underline-offset-4">ÁSZF-et</Link> és az adatkezelési feltételeket. A mentés jogi audit eseményt rögzít.</span>
-      </label>
       <Button type="submit" size="lg" disabled={pending} className="self-start">
         {pending ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <Save data-icon="inline-start" />}
         {pending ? 'Mentés…' : 'Profil mentése'}

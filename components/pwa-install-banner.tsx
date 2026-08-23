@@ -9,16 +9,6 @@ type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
-const DISMISSED_KEY = 'appPromptDismissed'
-
-function hasDismissedPrompt() {
-  try {
-    return window.localStorage.getItem(DISMISSED_KEY) === 'true'
-  } catch {
-    return false
-  }
-}
-
 export function PwaInstallBanner() {
   const [prompt, setPrompt] = useState<InstallPromptEvent | null>(null)
   const [isIos, setIsIos] = useState(false)
@@ -39,12 +29,11 @@ export function PwaInstallBanner() {
     const standalone = window.matchMedia('(display-mode: standalone)').matches ||
       ('standalone' in navigator && Boolean((navigator as Navigator & { standalone?: boolean }).standalone))
     setIsIos(/iphone|ipad|ipod/i.test(navigator.userAgent))
-    if (standalone || hasDismissedPrompt()) return
+    if (standalone) return
 
     setVisible(true)
     const onPrompt = (event: Event) => {
       event.preventDefault()
-      if (hasDismissedPrompt()) return
       setPrompt(event as InstallPromptEvent)
       setVisible(true)
     }
@@ -73,13 +62,9 @@ export function PwaInstallBanner() {
   }
 
   function dismiss() {
-    try {
-      window.localStorage.setItem(DISMISSED_KEY, 'true')
-    } finally {
-      setVisible(false)
-      setInstructions(false)
-      setPrompt(null)
-    }
+    setVisible(false)
+    setInstructions(false)
+    setPrompt(null)
   }
 
   if (!visible) return null

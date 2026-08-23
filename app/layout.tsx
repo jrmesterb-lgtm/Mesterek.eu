@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
+import { AdDemoProvider } from '@/components/ad-demo-context'
 import { CookieConsent } from '@/components/cookie-consent'
 import { PwaInstallBanner } from '@/components/pwa-install-banner'
 import './globals.css'
@@ -19,5 +20,5 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { colorScheme: 'light', themeColor: '#1e3a8a', width: 'device-width', initialScale: 1, userScalable: true }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="hu" className="bg-background"><body className={`${geist.variable} ${geistMono.variable} antialiased`}>{children}<PwaInstallBanner /><CookieConsent /></body></html>
+  return <html lang="hu" className="bg-background"><body className={`${geist.variable} ${geistMono.variable} antialiased`}><AdDemoProvider>{children}</AdDemoProvider><PwaInstallBanner /><CookieConsent /></body></html>
 }

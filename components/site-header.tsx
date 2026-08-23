@@ -31,17 +31,19 @@ export function SiteHeader({ isAuthenticated = false }: { isAuthenticated?: bool
   return (
     <header className="border-b-4 border-accent bg-primary text-primary-foreground">
       <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
-        <Link href="/" className="flex min-h-14 shrink-0 items-center gap-2 rounded-lg font-black text-xl leading-none text-primary-foreground focus-visible:outline-4 focus-visible:outline-offset-4 sm:gap-3 sm:text-2xl md:text-3xl" aria-label="Mesterek kezdőlap">
+        <Link href="/" className="flex min-h-14 shrink-0 items-center gap-2 rounded-lg font-black text-xl leading-none text-primary-foreground focus-visible:outline-4 focus-visible:outline-offset-4 sm:gap-3 sm:text-2xl md:text-3xl" aria-label="mesterek.eu kezdőlap">
           <AnimatedLogoMark />
-          <span className="hidden whitespace-nowrap text-primary-foreground min-[430px]:inline">Mesterek</span>
+          <span className="hidden whitespace-nowrap text-primary-foreground min-[430px]:inline">mesterek.eu</span>
         </Link>
         <nav className="hidden items-center gap-1 xl:flex" aria-label="Fő navigáció">
           {links.map(({ href, label, icon: Icon }) => <Link key={href} href={href} className="flex min-h-12 items-center gap-1.5 rounded-lg px-2 text-sm font-bold hover:bg-primary-foreground/10 focus-visible:outline-4 xl:px-3 xl:text-base"><Icon className="size-5" aria-hidden="true" />{label}</Link>)}
           <Link href="/admin" className="flex min-h-12 items-center gap-1.5 rounded-lg px-2 text-sm font-bold hover:bg-primary-foreground/10 xl:px-3 xl:text-base"><ShieldCheck className="size-5" aria-hidden="true" />Admin</Link>
+          <Link href={accountHref} className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-black text-accent-foreground shadow-sm transition hover:bg-accent/90 focus-visible:outline-4 focus-visible:outline-offset-2"><AccountIcon className="size-5" aria-hidden="true" />{accountLabel}</Link>
           <NativeShareButton compact />
           <SocialLinks />
         </nav>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2 xl:hidden">
+          <Link href={accountHref} className="hidden min-h-12 items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2 font-black text-accent-foreground shadow-sm transition hover:bg-accent/90 focus-visible:outline-4 focus-visible:outline-offset-2 md:flex"><AccountIcon className="size-5" aria-hidden="true" />{accountLabel}</Link>
           <NativeShareButton iconOnly />
           <SocialLinks />
           <button type="button" onClick={() => setOpen(!open)} className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-primary-foreground/70 bg-primary-foreground/10 shadow-[0_5px_16px_rgb(18_32_51/0.2)] transition-transform active:scale-95" aria-expanded={open} aria-controls="mobile-navigation" aria-label={open ? 'Menü bezárása' : 'Menü megnyitása'}>{open ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}</button>

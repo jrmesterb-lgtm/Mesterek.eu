@@ -43,7 +43,10 @@ export async function POST(request: Request) {
             await tx.update(professionals).set({
               membershipTier: 'FEATURED', featuredBillingInterval: checkout.metadata.interval || null,
               stripeSessionId: checkout.id, stripeCustomerId: String(checkout.customer || ''),
-              stripeSubscriptionId: String(checkout.subscription || ''), updatedAt: new Date(),
+              stripeSubscriptionId: String(checkout.subscription || ''),
+              // Checkout completed — the registration is now a real, paid/trialing
+              // account and may appear in the admin pending-review list.
+              paymentStatus: 'trial_active', updatedAt: new Date(),
             }).where(eq(professionals.id, professionalId))
           }
         }
@@ -58,6 +61,10 @@ export async function POST(request: Request) {
             stripeSubscriptionId: subscription.id,
             stripeSubscriptionStatus: subscription.status,
             stripeTrialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
+            // A live/trialing subscription confirms a completed checkout, so the
+            // record is safe to surface to admins even if the checkout.session
+            // event was missed.
+            paymentStatus: featured ? 'trial_active' : undefined,
             membershipTier: featured ? 'FEATURED' : 'FREE',
             featuredBillingInterval: featured ? subscription.metadata.interval || null : null,
             featuredUntil: subscription.items.data[0]?.current_period_end ? new Date(subscription.items.data[0].current_period_end * 1000) : null,

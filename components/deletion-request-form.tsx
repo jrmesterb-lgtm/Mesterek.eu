@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import { CheckCircle2, LoaderCircle, Trash2 } from 'lucide-react'
 import { submitDeletionRequest, type DeletionRequestState } from '@/app/adatlap-torlese/actions'
+import { TurnstileWidget } from '@/components/turnstile-widget'
 
 const initialState: DeletionRequestState = {}
 
@@ -20,7 +21,7 @@ export function DeletionRequestForm() {
 
   return (
     <form action={action} className="mt-8 flex flex-col gap-6">
-      <div className="hidden" aria-hidden="true"><label htmlFor="deletion-bot-field">Hagyja üresen</label><input id="deletion-bot-field" name="botField" type="text" tabIndex={-1} autoComplete="off" /></div>
+      <div className="hidden" aria-hidden="true"><label htmlFor="deletion-bot-field">Hagyja üresen</label><input id="deletion-bot-field" name="botField" type="text" tabIndex={-1} autoComplete="off" /><input type="text" name="website" className="hidden" tabIndex={-1} autoComplete="off" defaultValue="" /></div>
       {state.error && <div className="rounded-xl border-2 border-destructive bg-card p-4 font-bold text-destructive" role="alert">{state.error}</div>}
       <label className="flex flex-col gap-2">
         <span className="field-label">Szakember / Cég neve</span>
@@ -30,6 +31,7 @@ export function DeletionRequestForm() {
         <span className="field-label">E-mail cím</span>
         <input className="field-input" name="email" type="email" autoComplete="email" maxLength={254} required />
       </label>
+      <TurnstileWidget />
       <button className="btn-accent mt-2 w-full" type="submit" disabled={pending}>
         {pending ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
         {pending ? 'Kérés rögzítése…' : 'Kérem az adataim végleges törlését'}
