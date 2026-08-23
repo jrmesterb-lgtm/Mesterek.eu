@@ -1,0 +1,3 @@
+'use client'
+import { AlertTriangle, RotateCcw } from 'lucide-react'
+export default function ErrorPage({ reset }: { error: Error; reset: () => void }) { return <main className="flex min-h-screen items-center justify-center p-4"><section className="surface max-w-xl text-center"><AlertTriangle className="mx-auto size-14 text-destructive" aria-hidden="true" /><h1 className="mt-5 text-3xl font-black text-primary">Valami nem sikerült</h1><p className="mt-4 text-lg leading-relaxed">Kérjük, próbálja újra. Ha a hiba továbbra is fennáll, hívja ügyfélszolgálatunkat.</p><button onClick={reset} className="btn-primary mt-6"><RotateCcw aria-hidden="true" />Újrapróbálás</button></section></main> }
