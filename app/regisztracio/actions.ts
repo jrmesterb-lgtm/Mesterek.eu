@@ -13,10 +13,13 @@ import { HUNGARIAN_COUNTIES, isHungarianLocation } from '@/lib/hungary-locations
 import { eq } from 'drizzle-orm'
 import { limitPublic, PUBLIC_RATE_LIMIT_MESSAGE } from '@/lib/rate-limit'
 
+const EMAIL_REGEX = /^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)+$/i
+const PHONE_REGEX = /^(?:\+36|06)\d{8,9}$/
+
 const schema = z.object({
   name: z.string().trim().min(3, 'Kérjük, adja meg a teljes nevét.').max(120, 'A név legfeljebb 120 karakter lehet.'),
-  email: z.string().trim().toLowerCase().email('Kérjük, adjon meg egy érvényes e-mail-címet.').max(254, 'Az e-mail-cím legfeljebb 254 karakter lehet.'),
-  phone: z.string().trim().min(9, 'Érvényes telefonszám szükséges.').max(40, 'A telefonszám túl hosszú.'),
+  email: z.string().trim().toLowerCase().max(254, 'Az e-mail-cím legfeljebb 254 karakter lehet.').regex(EMAIL_REGEX, 'Kérjük, valós formátumú e-mail címet adjon meg!'),
+  phone: z.string().trim().regex(PHONE_REGEX, 'Érvényes telefonszámot adjon meg (pl. +36301234567)!'),
   county: z.preprocess((value) => value ?? '', z.string().trim().refine((value) => HUNGARIAN_COUNTIES.includes(value), 'Válasszon megyét.')),
   city: z.preprocess((value) => value ?? '', z.string().trim().min(1, 'Válasszon települést.')),
   zipCode: z.preprocess((value) => value ?? '', z.string().trim().regex(/^\d{4}$/, 'Érvényes irányítószám szükséges.')),
@@ -34,14 +37,36 @@ const schema = z.object({
   { message: 'A megye, a település és az irányítószám nem egyezik.', path: ['city'] },
 )
 
+export type RegistrationValues = Partial<Record<string, string>>
+
 export type RegistrationState = {
   error?: string
   fieldErrors?: Partial<Record<string, string>>
+  values?: RegistrationValues
+}
+
+// Fields whose submitted values we echo back to the client on a failed submit so
+// the form (controlled in RegistrationForm) can repopulate them and the user
+// never loses typed data on a validation error. Excludes secrets/one-time
+// tokens (Turnstile, honeypot) which must not be replayed.
+const ECHOED_FIELDS = [
+  'name', 'email', 'phone', 'county', 'city', 'zipCode', 'profession',
+  'description', 'taxType', 'taxNumber', 'billingName', 'billingAddress',
+  'billingInterval', 'isEmergency247', 'accepted',
+] as const
+
+function echoedValues(formData: FormData): RegistrationValues {
+  const values: RegistrationValues = {}
+  for (const field of ECHOED_FIELDS) {
+    const value = formData.get(field)
+    if (typeof value === 'string') values[field] = value
+  }
+  return values
 }
 
 export async function startRegistration(_: RegistrationState, formData: FormData): Promise<RegistrationState> {
   const rateLimit = await limitPublic('registration')
-  if (!rateLimit.success) return { error: PUBLIC_RATE_LIMIT_MESSAGE }
+  if (!rateLimit.success) return { error: PUBLIC_RATE_LIMIT_MESSAGE, values: echoedValues(formData) }
 
   const parsed = schema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) {
@@ -53,6 +78,7 @@ export async function startRegistration(_: RegistrationState, formData: FormData
     return {
       error: 'Ellenőrizze a pirossal jelölt mezőket.',
       fieldErrors,
+      values: echoedValues(formData),
     }
   }
   const data = parsed.data
@@ -60,7 +86,7 @@ export async function startRegistration(_: RegistrationState, formData: FormData
   const dashboardTokenHash = createHash('sha256').update(dashboardToken).digest('hex')
 
   try {
-    if (!process.env.STRIPE_SECRET_KEY) return { error: 'A próbaidőszak most nem indítható.' }
+    if (!process.env.STRIPE_SECRET_KEY) return { error: 'A próbaidőszak most nem indítható.', values: echoedValues(formData) }
     const legalMetadata = await legalRequestMetadata()
     const professionalId = await db.transaction(async (tx) => {
       const existing = await tx.select({ id: professionals.id }).from(professionals).where(eq(professionals.email, data.email)).limit(1)
@@ -71,6 +97,11 @@ export async function startRegistration(_: RegistrationState, formData: FormData
         status: 'PENDING_REVIEW',
         isAvailable: true,
         claimedAt: new Date(),
+        // Mark as awaiting checkout. The Stripe webhook promotes this to
+        // 'trial_active' once payment completes; until then the record is
+        // hidden from the admin pending-review list so abandoned checkouts
+        // never clutter the panel.
+        paymentStatus: 'pending',
         membershipTier: 'FREE',
         featuredBillingInterval: data.billingInterval,
         dashboardToken: dashboardTokenHash,
@@ -93,6 +124,7 @@ export async function startRegistration(_: RegistrationState, formData: FormData
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
     const session = await stripe.checkout.sessions.create({
       ui_mode: 'hosted_page',
+      locale: 'hu',
       mode: 'subscription',
       integration_identifier: `registration_${randomBytes(4).toString('hex')}`,
       customer_email: data.email,
@@ -101,18 +133,18 @@ export async function startRegistration(_: RegistrationState, formData: FormData
       cancel_url: `${origin}/regisztracio?megszakitva=1`,
       metadata: { professionalId: String(professionalId), product: 'FEATURED', interval: data.billingInterval },
       subscription_data: {
-        trial_period_days: 90,
+        trial_period_days: 60,
         metadata: { professionalId: String(professionalId), product: 'FEATURED', interval: data.billingInterval },
       },
-      line_items: [{ quantity: 1, price_data: { currency: 'huf', unit_amount: annual ? 5499000 : 499000, recurring: { interval: data.billingInterval }, product_data: { name: 'Kiemelt Mester', description: annual ? 'Éves előfizetés 90 napos próbaidőszakkal' : 'Havi előfizetés 90 napos próbaidőszakkal' } } }],
+      line_items: [{ quantity: 1, price_data: { currency: 'huf', unit_amount: annual ? 4999000 : 499000, recurring: { interval: data.billingInterval }, product_data: { name: 'Kiemelt Mester', description: annual ? 'Éves előfizetés 60 napos próbaidőszakkal' : 'Havi előfizetés 60 napos próbaidőszakkal' } } }],
     }, { idempotencyKey: `registration-${professionalId}-${dashboardTokenHash.slice(0, 24)}` })
-    if (!session.url) return { error: 'A fizetési oldal most nem érhető el.' }
+    if (!session.url) return { error: 'A fizetési oldal most nem érhető el.', values: echoedValues(formData) }
     redirect(session.url)
   } catch (error) {
     if (error instanceof Error && error.message === 'NEXT_REDIRECT') throw error
     if (error instanceof Error && error.message === 'DUPLICATE_REGISTRATION') {
-      return { error: 'Ezzel az e-mail-címmel már létezik adatlap. Jelentkezzen be, vagy kérjen jelszó-visszaállítást.' }
+      return { error: 'Ezzel az e-mail-címmel már létezik adatlap. Jelentkezzen be, vagy kérjen jelszó-visszaállítást.', values: echoedValues(formData) }
     }
-    return { error: 'A regisztráció most nem indítható. Kérjük, próbálja újra később.' }
+    return { error: 'A regisztráció most nem indítható. Kérjük, próbálja újra később.', values: echoedValues(formData) }
   }
 }

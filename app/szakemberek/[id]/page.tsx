@@ -1,14 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { and, count, desc, eq, sql } from 'drizzle-orm'
-import { ArrowLeft, BriefcaseBusiness, Flame, Globe, MapPin, MessageCircle, ShieldCheck, Star } from 'lucide-react'
+import { and, eq } from 'drizzle-orm'
+import { ArrowLeft, BriefcaseBusiness, Globe, MapPin, MessageCircle, ShieldCheck, Siren } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { AppShell } from '@/components/app-shell'
-import { RatingSummary } from '@/components/rating-summary'
-import { ReviewForm } from '@/components/review-form'
+import { PortfolioGallery } from '@/components/portfolio-gallery'
 import { TrackedCallLink } from '@/components/tracked-call-link'
 import { db } from '@/lib/db'
-import { professionalReviews, professionals } from '@/lib/db/schema'
+import { professionals } from '@/lib/db/schema'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -25,17 +24,124 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: `${professional.name} – ${professional.profession}`, description: professional.description.slice(0, 160) }
 }
 
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+}
+
 export default async function ProfessionalProfilePage({ params }: Props) {
   const professional = await getProfessional((await params).id)
   if (!professional) notFound()
   const phone = professional.phone.replace(/\s/g, '')
   const whatsapp = (professional.whatsappPhone || professional.phone).replace(/\D/g, '').replace(/^06/, '36')
-  const [reviews, [summary]] = await Promise.all([
-    db.select().from(professionalReviews).where(eq(professionalReviews.professionalId, professional.id)).orderBy(desc(professionalReviews.createdAt)).limit(50),
-    db.select({ reviewCount: count(), averageRating: sql<number>`round(avg(${professionalReviews.rating})::numeric, 1)` }).from(professionalReviews).where(eq(professionalReviews.professionalId, professional.id)),
-  ])
-  const reviewCount = summary?.reviewCount ?? 0
-  const averageRating = Number(summary?.averageRating ?? 0)
+  const location = `${professional.zipCode ? `${professional.zipCode} ` : ''}${professional.address || professional.city}`
 
-  return <AppShell><main className="page-wrap"><Link href="/kereses" className="inline-flex items-center gap-2 font-black text-primary hover:underline"><ArrowLeft className="size-5" aria-hidden="true" />Vissza a kereséshez</Link><article className="mt-6 overflow-hidden rounded-2xl border-2 border-border bg-card shadow-xl"><header className="bg-primary p-6 text-primary-foreground md:p-10"><div className="flex flex-wrap items-center gap-3">{professional.verifiedAt && <span className="inline-flex items-center gap-2 rounded-full bg-primary-foreground/15 px-4 py-2 text-sm font-black"><ShieldCheck className="size-5" aria-hidden="true" />Ellenőrzött</span>}{professional.isEmergency247 && <span className="sos-badge" aria-label="SOS, éjjel-nappal elérhető"><span className="sos-dot" aria-hidden="true" /><Flame className="size-5" aria-hidden="true" />SOS 0-24</span>}</div><h1 className="mt-5 text-balance text-4xl font-black md:text-6xl">{professional.name}</h1><p className="mt-3 flex items-center gap-2 text-xl font-bold"><BriefcaseBusiness aria-hidden="true" />{professional.profession}</p><p className="mt-2 flex items-center gap-2 font-bold text-primary-foreground/85"><MapPin aria-hidden="true" />{professional.zipCode ? `${professional.zipCode} ` : ''}{professional.address || professional.city}</p><div className="mt-5"><RatingSummary average={averageRating} count={reviewCount} inverse /></div></header><div className="grid gap-8 p-6 md:grid-cols-[1fr_18rem] md:p-10"><div><h2 className="text-2xl font-black text-primary">Bemutatkozás</h2><p className="mt-4 whitespace-pre-line text-lg leading-relaxed text-foreground">{professional.extendedBio || professional.description}</p></div><aside className="flex flex-col gap-3"><TrackedCallLink contractorId={professional.id} phone={phone} label="Hívás most" displayPhone={professional.phone} featured />{whatsapp && <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="btn-outline"><MessageCircle aria-hidden="true" />WhatsApp</a>}{professional.website && <a href={professional.website} target="_blank" rel="noopener noreferrer" className="btn-outline"><Globe aria-hidden="true" />Weboldal</a>}</aside></div></article><section className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]" aria-labelledby="reviews-title"><div><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="font-black text-primary">Ügyfélvélemények</p><h2 id="reviews-title" className="mt-1 text-3xl font-black text-foreground">Tapasztalatok erről a Mesterről</h2></div><RatingSummary average={averageRating} count={reviewCount} /></div><div className="mt-6 flex flex-col gap-4">{reviews.length ? reviews.map((review) => <article key={review.id} className="rounded-xl border border-border bg-card p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap items-center gap-2"><p className="font-black text-foreground">{review.clientName}</p>{review.verifiedContact && <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-xs font-black text-primary"><ShieldCheck className="size-4" aria-hidden="true" />Ellenőrzött hívás utáni értékelés</span>}</div><div className="flex gap-0.5" aria-label={`${review.rating} csillagos értékelés`}>{[1, 2, 3, 4, 5].map((star) => <Star key={star} className={`size-5 ${star <= review.rating ? 'fill-accent text-accent' : 'text-muted-foreground/35'}`} aria-hidden="true" />)}</div></div>{review.comment && <p className="mt-3 whitespace-pre-line leading-relaxed text-foreground">{review.comment}</p>}<time className="mt-3 block text-sm font-bold text-muted-foreground" dateTime={review.createdAt.toISOString()}>{new Intl.DateTimeFormat('hu-HU', { dateStyle: 'long' }).format(review.createdAt)}</time></article>) : <div className="rounded-xl border border-dashed border-border bg-card p-6"><p className="font-black text-foreground">Legyen Ön az első értékelő.</p><p className="mt-2 text-muted-foreground">Ossza meg tapasztalatát ezzel a szakemberrel kapcsolatban.</p></div>}</div></div><ReviewForm professionalId={professional.id} /></section></main></AppShell>
+  return (
+    <AppShell>
+      <div className="bg-muted/40">
+      <main className="page-wrap">
+        <Link href="/kereses" className="inline-flex items-center gap-2 text-sm font-bold text-muted-foreground transition-colors hover:text-primary">
+          <ArrowLeft className="size-4" aria-hidden="true" />Vissza a kereséshez
+        </Link>
+
+        {/* HERO HEADER */}
+        <section className="mt-5 rounded-2xl bg-white p-6 shadow-sm md:p-8">
+          <div className="flex flex-col gap-7 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
+              <span aria-hidden="true" className="flex size-20 shrink-0 items-center justify-center rounded-full bg-primary text-2xl font-black text-primary-foreground shadow-md sm:size-24 sm:text-3xl">
+                {getInitials(professional.name)}
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  {professional.verifiedAt && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                      <ShieldCheck className="size-3.5" aria-hidden="true" />Ellenőrzött szakember
+                    </span>
+                  )}
+                  {professional.isEmergency247 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-3 py-1 text-xs font-bold text-destructive">
+                      <Siren className="size-3.5" aria-hidden="true" />0-24 ügyelet
+                    </span>
+                  )}
+                </div>
+                <h1 className="mt-2 text-pretty text-2xl font-black leading-tight tracking-tight text-foreground sm:text-3xl">{professional.name}</h1>
+                <p className="mt-1.5 flex items-center gap-2 font-bold text-primary">
+                  <BriefcaseBusiness className="size-4.5 shrink-0" aria-hidden="true" />{professional.profession}
+                </p>
+                <p className="mt-1 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <MapPin className="size-4.5 shrink-0" aria-hidden="true" />{location}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex w-full flex-col gap-4 lg:max-w-xs">
+              {/* AVAILABILITY STATUS */}
+              {professional.isAvailable ? (
+                <div className="flex items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3">
+                  <span className="relative flex size-3 shrink-0" aria-hidden="true">
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+                    <span className="relative inline-flex size-3 rounded-full bg-emerald-500" />
+                  </span>
+                  <p className="text-sm font-bold text-emerald-700">Jelenleg tud új munkát vállalni</p>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 rounded-xl bg-muted px-4 py-3">
+                  <span className="size-3 shrink-0 rounded-full bg-muted-foreground/50" aria-hidden="true" />
+                  <p className="text-sm font-bold text-muted-foreground">Jelenleg nem vállal új munkát</p>
+                </div>
+              )}
+
+              {/* CALL TO ACTION */}
+              <TrackedCallLink contractorId={professional.id} phone={phone} label="Hívás most" displayPhone={professional.phone} featured compact maskUntilReveal revealLabel="Telefonszám mutatása" />
+              <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+                {whatsapp && (
+                  <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-full border-2 border-primary bg-card px-5 text-base font-black text-primary transition-colors hover:bg-secondary">
+                    <MessageCircle className="size-5" aria-hidden="true" />WhatsApp
+                  </a>
+                )}
+                {professional.website && (
+                  <a href={professional.website} target="_blank" rel="noopener noreferrer" className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-full border-2 border-primary bg-card px-5 text-base font-black text-primary transition-colors hover:bg-secondary">
+                    <Globe className="size-5" aria-hidden="true" />Weboldal
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div className="mt-6 flex flex-col gap-6">
+            {/* ABOUT SECTION */}
+            <section aria-labelledby="about-title" className="rounded-2xl bg-white p-6 shadow-sm md:p-8">
+              <h2 id="about-title" className="text-2xl font-black text-foreground">Bemutatkozás</h2>
+              <p className="mt-4 whitespace-pre-line text-base leading-relaxed text-foreground/90">
+                {professional.extendedBio || professional.description || 'Ez a szakember még nem töltött ki bemutatkozást.'}
+              </p>
+              {professional.isEmergency247 && (
+                <div className="mt-6 flex items-start gap-4 rounded-xl bg-destructive/5 p-4">
+                  <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+                    <Siren className="size-5" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <p className="font-bold text-foreground">0-24 ügyelet</p>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Sürgős esetben éjjel-nappal, hétvégén és ünnepnapokon is elérhető.</p>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* PORTFOLIO GALLERY */}
+            <section aria-labelledby="portfolio-title" className="rounded-2xl bg-white p-6 shadow-sm md:p-8">
+              <h2 id="portfolio-title" className="text-2xl font-black text-foreground">Munkaportfólió</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Válogatás a szakember korábbi munkáiból.</p>
+              <PortfolioGallery count={6} />
+            </section>
+        </div>
+      </main>
+      </div>
+    </AppShell>
+  )
 }

@@ -1,7 +1,9 @@
 import Link from 'next/link'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq, ne, or, isNull } from 'drizzle-orm'
 import { BarChart3, Clock3, LogOut, ShieldCheck, Star, Users } from 'lucide-react'
+import { AdminAdDemoToggle } from '@/components/admin-ad-demo-toggle'
 import { AdminCategoryStatistics } from '@/components/admin-category-statistics'
+import { AdminCollapsibleSection } from '@/components/admin-collapsible-section'
 import { AdminCsvImport } from '@/components/admin-csv-import'
 import { AdminLogin } from '@/components/admin-login'
 import { AdminPendingReviewList } from '@/components/admin-pending-review-list'
@@ -22,7 +24,10 @@ export default async function AdminPage() {
 
   const [records, pendingRecords, reviews] = await Promise.all([
     db.select().from(professionals).orderBy(desc(professionals.createdAt)),
-    db.select().from(professionals).where(eq(professionals.status, 'PENDING_REVIEW')).orderBy(desc(professionals.createdAt)),
+    // Pending-review list: exclude self-registrations that started Stripe
+    // checkout but never completed it (paymentStatus = 'pending'). Imported and
+    // admin-created records have a NULL paymentStatus and stay visible.
+    db.select().from(professionals).where(and(eq(professionals.status, 'PENDING_REVIEW'), or(isNull(professionals.paymentStatus), ne(professionals.paymentStatus, 'pending')))).orderBy(desc(professionals.createdAt)),
     db.select({ id: professionalReviews.id, professionalId: professionalReviews.professionalId, professionalName: professionals.name, clientName: professionalReviews.clientName, rating: professionalReviews.rating, comment: professionalReviews.comment, verifiedContact: professionalReviews.verifiedContact, createdAt: professionalReviews.createdAt }).from(professionalReviews).innerJoin(professionals, eq(professionalReviews.professionalId, professionals.id)).orderBy(desc(professionalReviews.createdAt)).limit(500),
   ])
   const activeRecords = records.filter((item) => item.status === 'APPROVED')
@@ -44,27 +49,31 @@ export default async function AdminPage() {
 
         <AdminCsvImport />
 
+        <AdminAdDemoToggle />
+
         <section className="grid gap-5 sm:grid-cols-3" aria-label="Adatbázis statisztikák">
           <Stat icon={Users} value={records.length} label="Összes szakember" />
           <Stat icon={Clock3} value={pendingReview} label="Függőben lévő regisztrációk" />
           <Stat icon={Star} value={activePriority} label="Aktív kiemelt szakemberek" />
         </section>
 
-        <section aria-labelledby="quick-review-title">
-          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="font-black text-primary">Minőségellenőrzés</p><div className="mt-1 flex flex-wrap items-center gap-3"><h2 id="quick-review-title" className="text-3xl font-black text-foreground">Regisztrációk jóváhagyása</h2><span className="inline-flex min-h-8 items-center rounded-full bg-accent px-3 py-1 text-sm font-black text-accent-foreground" aria-label={`${pendingReview} ellenőrzésre váró regisztráció`}>{pendingReview} várakozik</span></div><p className="mt-2 text-muted-foreground">Csak a jóváhagyott adatlapok jelennek meg a nyilvános keresőben és kategórialistákban.</p></div><Link href="/admin/kategoria-ellenorzes" className="btn-secondary">Részletes ellenőrzés</Link></div>
+        <AdminCollapsibleSection id="quick-review-title" eyebrow="Minőségellenőrzés" title="Regisztrációk jóváhagyása" description="Csak a jóváhagyott adatlapok jelennek meg a nyilvános keresőben és kategórialistákban." meta={<span className="inline-flex min-h-8 items-center rounded-full bg-accent px-3 py-1 text-sm font-black text-accent-foreground" aria-label={`${pendingReview} ellenőrzésre váró regisztráció`}>{pendingReview} várakozik</span>} actions={<Link href="/admin/kategoria-ellenorzes" className="btn-secondary">Részletes ellenőrzés</Link>}>
           <AdminPendingReviewList records={pendingRecords} />
-        </section>
+        </AdminCollapsibleSection>
 
-        <AdminCategoryStatistics records={records} />
+        <AdminCollapsibleSection id="category-statistics-title" eyebrow="Kategóriastatisztika" title="Aktív szakemberek szakmánként" description="A kategóriák lefedettsége és az aktív adatlapok száma.">
+          <AdminCategoryStatistics records={records} />
+        </AdminCollapsibleSection>
 
-        <AdminReviewList reviews={reviews} />
+        <AdminCollapsibleSection id="reviews-title" eyebrow="Moderáció" title="Vélemények kezelése" description="Az értékelések azonnal megjelennek; itt bármelyik eltávolítható." meta={<span className="font-bold text-muted-foreground">{reviews.length} vélemény</span>}>
+          <AdminReviewList reviews={reviews} />
+        </AdminCollapsibleSection>
 
-        <section className="min-w-0" aria-labelledby="professionals-title">
-          <div className="mb-5 flex items-end justify-between gap-4"><div><p className="font-black text-primary">Aktív adatlapok</p><h2 id="professionals-title" className="mt-1 text-3xl font-black text-foreground">Jóváhagyott szakemberek kezelése</h2><p className="mt-2 text-muted-foreground">Kiemelés, SOS-hozzáférés, profiladatok és láthatóság kezelése.</p></div><p className="hidden font-bold text-muted-foreground sm:block">{activeRecords.length} aktív adatlap</p></div>
-          <div className="max-w-full overflow-x-auto"><AdminProfessionalList records={activeRecords} /></div>
-        </section>
+        <AdminCollapsibleSection id="professionals-title" eyebrow="Aktív adatlapok" title="Jóváhagyott szakemberek kezelése" description="Kiemelés, SOS-hozzáférés, profiladatok és láthatóság kezelése." meta={<span className="font-bold text-muted-foreground">{activeRecords.length} aktív adatlap</span>}>
+          <div className="max-w-full overflow-x-auto p-5 sm:p-6"><AdminProfessionalList records={activeRecords} /></div>
+        </AdminCollapsibleSection>
 
-        {inactiveRecords.length > 0 && <details className="rounded-2xl border border-border bg-card p-5"><summary className="cursor-pointer text-xl font-black text-foreground">Elutasított adatlapok ({inactiveRecords.length})</summary><div className="mt-5 max-w-full overflow-x-auto"><AdminProfessionalList records={inactiveRecords} /></div></details>}
+        {inactiveRecords.length > 0 && <AdminCollapsibleSection id="rejected-professionals-title" eyebrow="Archivált adatlapok" title="Elutasított adatlapok" meta={<span className="font-bold text-muted-foreground">{inactiveRecords.length} adatlap</span>} defaultOpen={false}><div className="max-w-full overflow-x-auto p-5 sm:p-6"><AdminProfessionalList records={inactiveRecords} /></div></AdminCollapsibleSection>}
       </div>
     </main>
   )

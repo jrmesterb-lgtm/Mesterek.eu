@@ -1,7 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { FormEvent, useState } from 'react'
-import { KeyRound, LoaderCircle, LockKeyhole, MailCheck, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, KeyRound, LoaderCircle, LockKeyhole, MailCheck, ShieldCheck } from 'lucide-react'
+import { PasswordInput } from '@/components/password-input'
 
 export function AdminLogin() {
   const [step, setStep] = useState<'credentials' | 'otp_pending'>('credentials')
@@ -33,13 +35,14 @@ export function AdminLogin() {
 
   return (
     <section className="w-full max-w-md" aria-labelledby="admin-login-title">
+      <Link href="/" className="mb-6 inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 font-bold text-background transition hover:bg-background/10 hover:text-accent focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent"><ArrowLeft className="size-5" aria-hidden="true" />Vissza a főoldalra</Link>
       <div className="mb-8 flex items-center justify-center gap-3"><span className="flex size-12 items-center justify-center rounded-xl bg-accent text-accent-foreground"><ShieldCheck aria-hidden="true" /></span><div><p className="text-sm font-black uppercase tracking-widest text-accent">Mesterek</p><p className="font-black text-background">Admin Panel</p></div></div>
       {step === 'credentials' ? (
         <form onSubmit={(event) => submit(event, '/api/admin/login')} className="rounded-2xl border border-muted-foreground bg-card p-6 text-card-foreground shadow-2xl md:p-8">
           <div className="flex size-12 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"><LockKeyhole aria-hidden="true" /></div>
           <h1 id="admin-login-title" className="mt-6 text-balance text-3xl font-black tracking-tight">Biztonságos belépés</h1>
           <p className="mt-3 text-pretty leading-relaxed text-muted-foreground">Adja meg az admin e-mail-címet és jelszót. Sikeres ellenőrzés után e-mailben küldjük a belépési kódot.</p>
-          <div className="mt-6 flex flex-col gap-4"><label className="flex flex-col gap-2"><span className="field-label">Admin e-mail</span><input name="email" type="email" autoComplete="username" className="field-input" placeholder="admin@domain.com" required autoFocus aria-invalid={Boolean(error)} /></label><label className="flex flex-col gap-2"><span className="field-label">Admin jelszó</span><input name="password" type="password" autoComplete="current-password" className="field-input" required aria-invalid={Boolean(error)} /></label></div>
+          <div className="mt-6 flex flex-col gap-4"><label className="flex flex-col gap-2"><span className="field-label">Admin e-mail</span><input name="email" type="email" autoComplete="username" className="field-input" placeholder="admin@domain.com" required autoFocus aria-invalid={Boolean(error)} /></label><label className="flex flex-col gap-2"><span className="field-label">Admin jelszó</span><PasswordInput name="password" autoComplete="current-password" required aria-invalid={Boolean(error)} /></label></div>
           {error && <p className="mt-4 font-bold text-destructive" role="alert">{error}</p>}
           <button className="btn-primary mt-6 w-full" disabled={pending}>{pending ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <KeyRound aria-hidden="true" />}{pending ? 'Kód küldése…' : 'Tovább a kódhoz'}</button>
         </form>

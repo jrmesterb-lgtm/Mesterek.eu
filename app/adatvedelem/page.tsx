@@ -8,7 +8,7 @@ export const metadata = {
 }
 
 const sections = [
-  { title: '1. Adatkezelő', text: ['Barna János Mester (Enskild firma), Kvarngatan 6, 533 30 Götene, Svédország. Org.nr / personnummer: 19930124-2930; EU VAT: SE930124293001. Kapcsolat: info@mesterek.eu.'] },
+  { title: '1. Adatkezelő', text: ['Barna János Mester (Enskild firma), Kvarngatan 6, 533 30 Götene, Svédország. Cégjegyzékszám (Org.nr): 19930124-2930; EU VAT: SE930124293001. Kapcsolat: info@mesterek.eu.'] },
   { title: '2. Kezelt adatok és célok', text: ['Szakember-regisztrációkor kapcsolattartási, szakmai, számlázási, adózási, előfizetési és biztonsági adatokat kezelünk a profil létrehozásához, ellenőrzéséhez, közzétételéhez, a szerződés teljesítéséhez, számlázáshoz, visszaélés-megelőzéshez és ügyfélszolgálathoz.', 'Látogatóktól a webhely biztonságos működéséhez szükséges technikai adatokat és cookie-választást kezeljük. Opcionális analitika kizárólag előzetes hozzájárulás után működik.'] },
   { title: '3. Jogalapok', text: ['Az adatkezelés jogalapja a szerződés megkötése és teljesítése, jogi kötelezettség, a platform biztonságos működéséhez fűződő jogos érdek, valamint az opcionális cookie-k esetén az önkéntes hozzájárulás. A hozzájárulás bármikor visszavonható, ez nem érinti a korábbi adatkezelés jogszerűségét.'] },
   { title: '4. Adatfeldolgozók és továbbítás', text: ['A Vercel tárhely- és infrastruktúra-szolgáltatást, a Neon adatbázis-infrastruktúrát, a Stripe fizetési és előfizetési szolgáltatást, a Bokio könyvelési támogatást biztosít. A Mesterek.eu teljes bankkártyaadatot nem kap meg és nem tárol.', 'Az Európai Gazdasági Térségen kívüli adattovábbítás csak megfelelő garanciák – például megfelelőségi határozat vagy uniós általános szerződési feltételek – mellett történhet.'] },

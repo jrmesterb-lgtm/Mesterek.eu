@@ -3,8 +3,10 @@
 import { FormEvent, useState } from 'react'
 import { KeyRound, LoaderCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { completePasswordReset } from '@/app/actions/password-reset'
+import { PasswordInput } from '@/components/password-input'
 
-export function ResetPasswordForm({ token }: { token: string }) {
+export function ResetPasswordForm({ token, email }: { token: string; email: string }) {
   const router = useRouter()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
@@ -24,13 +26,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
     }
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newPassword: password, token }),
-      })
-      if (!response.ok) {
-        setError('A hivatkozás érvénytelen vagy lejárt. Kérjen új helyreállítási hivatkozást.')
+      const result = await completePasswordReset(form)
+      if (!result.success) {
+        setError(result.error || 'A hivatkozás érvénytelen vagy lejárt. Kérjen új helyreállítási hivatkozást.')
         return
       }
       router.push('/belepes?reset=success')
@@ -44,13 +42,15 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-5" aria-describedby={error ? 'reset-error' : undefined}>
+      <input type="hidden" name="token" value={token} />
+      <input type="hidden" name="email" value={email} />
       <label className="flex flex-col gap-2">
         <span className="field-label">Új jelszó</span>
-        <input name="password" type="password" autoComplete="new-password" className="field-input" required minLength={12} maxLength={128} autoFocus />
+        <PasswordInput name="password" autoComplete="new-password" required minLength={12} maxLength={128} autoFocus />
       </label>
       <label className="flex flex-col gap-2">
         <span className="field-label">Új jelszó ismét</span>
-        <input name="confirmation" type="password" autoComplete="new-password" className="field-input" required minLength={12} maxLength={128} />
+        <PasswordInput name="confirmation" autoComplete="new-password" required minLength={12} maxLength={128} />
       </label>
       <p className="text-sm leading-relaxed text-muted-foreground">A jelszó legalább 12 karakterből álljon.</p>
       {error && <p id="reset-error" role="alert" className="font-bold text-destructive">{error}</p>}

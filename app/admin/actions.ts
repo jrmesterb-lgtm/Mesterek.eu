@@ -10,7 +10,7 @@ import { CATEGORIES, hasCategoryBusinessConflict, MUNICIPALITIES, resolveImportC
 import { db } from '@/lib/db'
 import { professionalReviews, professionals } from '@/lib/db/schema'
 import { hasBlacklistedContractorKeyword } from '@/lib/contractor-quality'
-import { extractHungarianCity, locationByCity } from '@/lib/hungary-locations'
+import { extractHungarianCity, locationByCity, locationByCountyAndCity } from '@/lib/hungary-locations'
 
 export type ImportResult = {
   inserted: number
@@ -55,6 +55,60 @@ export async function setProfessionalStatus(formData: FormData): Promise<Profess
   } catch (error) {
     console.error('[admin:setProfessionalStatus] Failed to update contractor status.', { error })
     return { success: false, error: error instanceof z.ZodError ? 'Érvénytelen szakemberazonosító vagy státusz.' : 'A státusz frissítése közben hiba történt.' }
+  }
+}
+
+export type PendingProfessionalUpdateResult = {
+  success: boolean
+  error?: string
+  fieldErrors?: Partial<Record<'name' | 'profession' | 'county' | 'city' | 'phone' | 'email', string>>
+}
+
+const pendingProfessionalSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  name: z.string().trim().min(3, 'A név legalább 3 karakter legyen.').max(250, 'A név legfeljebb 250 karakter lehet.'),
+  profession: z.string().trim().refine((value) => CATEGORIES.some((category) => category.name === value), 'Válasszon érvényes szakmát.'),
+  county: z.string().trim().min(1, 'Válasszon megyét.'),
+  city: z.string().trim().min(1, 'Válasszon települést.'),
+  phone: z.string().trim().regex(/^(?:\+36|06)\d{8,9}$/, 'Érvényes telefonszámot adjon meg (pl. +36301234567)!'),
+  email: z.union([z.literal(''), z.string().trim().toLowerCase().email('Kérjük, valós formátumú e-mail címet adjon meg!').max(254)]),
+})
+
+export async function updatePendingProfessional(formData: FormData): Promise<PendingProfessionalUpdateResult> {
+  try {
+    await requireAdmin()
+    const parsed = pendingProfessionalSchema.safeParse(Object.fromEntries(formData))
+    if (!parsed.success) {
+      const flattened = parsed.error.flatten().fieldErrors
+      return {
+        success: false,
+        error: 'Kérjük, javítsa a megjelölt mezőket.',
+        fieldErrors: Object.fromEntries(Object.entries(flattened).map(([key, messages]) => [key, messages?.[0]])),
+      }
+    }
+
+    const location = locationByCountyAndCity(parsed.data.county, parsed.data.city)
+    if (!location) {
+      return { success: false, error: 'A megye és a település nem tartozik össze.', fieldErrors: { city: 'Válasszon a megadott megyéhez tartozó települést.' } }
+    }
+
+    const updated = await db.update(professionals).set({
+      name: parsed.data.name,
+      profession: parsed.data.profession,
+      county: location.county,
+      city: location.city,
+      zipCode: location.zipCode,
+      phone: parsed.data.phone,
+      email: parsed.data.email || null,
+      updatedAt: new Date(),
+    }).where(and(eq(professionals.id, parsed.data.id), eq(professionals.status, 'PENDING_REVIEW'))).returning({ id: professionals.id })
+
+    if (updated.length !== 1) return { success: false, error: 'A függőben lévő regisztráció nem található vagy már feldolgozták.' }
+    revalidateProfessionalPages()
+    return { success: true }
+  } catch (error) {
+    console.error('[admin:updatePendingProfessional] Failed to update pending registration.', { error })
+    return { success: false, error: 'A regisztráció mentése közben hiba történt. Ellenőrizze, hogy az e-mail-cím nem foglalt-e.' }
   }
 }
 

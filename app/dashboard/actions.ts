@@ -85,16 +85,67 @@ export async function updateProfile(_previousState: ProfileActionState, formData
   return { status: 'success', message: 'A profil adatai frissültek.' }
 }
 
-export async function startFeaturedCheckout(formData: FormData) {
+const CHECKOUT_PLANS = {
+  month: { lookupKey: 'kiemelt_mester_monthly', amount: 499000, interval: 'month' },
+  year: { lookupKey: 'kiemelt_mester_yearly', amount: 4999000, interval: 'year' },
+} as const
+
+const checkoutInputSchema = z.object({
+  interval: z.enum(['month', 'year']),
+  attemptId: z.string().uuid(),
+})
+
+export type CheckoutResult =
+  | { success: true; url: string }
+  | { success: false; message: string }
+
+export async function startFeaturedCheckout(interval: 'month' | 'year', attemptId: string): Promise<CheckoutResult> {
+  const input = checkoutInputSchema.safeParse({ interval, attemptId })
+  if (!input.success) return { success: false, message: 'Érvénytelen előfizetési csomag.' }
+  if (!process.env.STRIPE_SECRET_KEY) return { success: false, message: 'A fizetés jelenleg nem indítható.' }
+
   const professional = await requiredProfessional()
-  const interval = z.enum(['month','year']).parse(formData.get('interval'))
-  if (!process.env.STRIPE_SECRET_KEY) throw new Error('A fizetés nem indítható.')
+  const plan = CHECKOUT_PLANS[input.data.interval]
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
-  const origin = getAppOrigin()
-  const annual = interval === 'year'
-  const session = await stripe.checkout.sessions.create({ ui_mode: 'hosted_page', mode: 'subscription', integration_identifier: `featured_${randomBytes(4).toString('hex')}`, customer: professional.stripeCustomerId || undefined, customer_email: professional.stripeCustomerId ? undefined : professional.email || undefined, success_url: `${origin}/dashboard?siker=1`, cancel_url: `${origin}/dashboard?megszakitva=1`, client_reference_id: String(professional.id), metadata: { professionalId: String(professional.id), product: 'FEATURED', interval }, subscription_data: { metadata: { professionalId: String(professional.id), product: 'FEATURED', interval } }, line_items: [{ quantity: 1, price_data: { currency: 'huf', unit_amount: annual ? 5499000 : 499000, recurring: { interval }, product_data: { name: 'Kiemelt Mester', description: annual ? 'Éves kiemelt megjelenés' : 'Havi kiemelt megjelenés' } } }] })
-  if (!session.url) throw new Error('A fizetési oldal nem érhető el.')
-  redirect(session.url)
+
+  try {
+    const prices = await stripe.prices.list({
+      active: true,
+      lookup_keys: [plan.lookupKey],
+      limit: 1,
+    })
+    const price = prices.data[0]
+    if (
+      !price ||
+      price.currency !== 'huf' ||
+      price.unit_amount !== plan.amount ||
+      price.type !== 'recurring' ||
+      price.recurring?.interval !== plan.interval
+    ) {
+      return { success: false, message: 'A kiválasztott csomag jelenleg nem érhető el.' }
+    }
+
+    const origin = getAppOrigin()
+    const checkoutSession = await stripe.checkout.sessions.create({
+      ui_mode: 'hosted_page',
+      locale: 'hu',
+      mode: 'subscription',
+      integration_identifier: `featured_${randomBytes(4).toString('hex')}`,
+      customer: professional.stripeCustomerId || undefined,
+      customer_email: professional.stripeCustomerId ? undefined : professional.email || undefined,
+      success_url: `${origin}/dashboard?siker=1`,
+      cancel_url: `${origin}/dashboard?megszakitva=1`,
+      client_reference_id: String(professional.id),
+      metadata: { professionalId: String(professional.id), product: 'FEATURED', interval: input.data.interval },
+      subscription_data: { metadata: { professionalId: String(professional.id), product: 'FEATURED', interval: input.data.interval } },
+      line_items: [{ quantity: 1, price: price.id }],
+    }, { idempotencyKey: `featured:${professional.id}:${input.data.interval}:${input.data.attemptId}` })
+
+    if (!checkoutSession.url) return { success: false, message: 'A Stripe fizetési oldal nem érhető el.' }
+    return { success: true, url: checkoutSession.url }
+  } catch {
+    return { success: false, message: 'A fizetés indítása nem sikerült. Próbálja újra.' }
+  }
 }
 
 export async function openBillingPortal() { const professional = await requiredProfessional(); if (!professional.stripeCustomerId || !process.env.STRIPE_SECRET_KEY) throw new Error('Nincs kezelhető előfizetés.'); const stripe = new Stripe(process.env.STRIPE_SECRET_KEY); const portal = await stripe.billingPortal.sessions.create({ customer: professional.stripeCustomerId, return_url: `${getAppOrigin()}/dashboard` }); redirect(portal.url) }

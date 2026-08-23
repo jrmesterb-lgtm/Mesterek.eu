@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   const ip = clientIp(request)
   const email = await loginEmail(request)
   const rule: ProfessionalAuthLimiter | undefined = path.endsWith('/sign-in/email') ? 'login'
-    : path.endsWith('/two-factor/verify-totp') ? 'twoFactor'
+    : path.endsWith('/two-factor/verify-otp') || path.endsWith('/two-factor/send-otp') ? 'twoFactor'
       : path.endsWith('/request-password-reset') || path.endsWith('/forget-password') ? 'forgotPassword'
         : path.endsWith('/reset-password') ? 'resetPassword' : undefined
   if (rule) {
@@ -77,7 +77,8 @@ export async function POST(request: Request) {
     return response
   }
   const response = await handler.POST(request)
-  if (path.endsWith('/two-factor/verify-totp')) log(response.ok ? 'two_factor_success' : 'two_factor_failed', { ip })
+  if (path.endsWith('/two-factor/verify-otp')) log(response.ok ? 'two_factor_success' : 'two_factor_failed', { ip })
+  if (path.endsWith('/two-factor/send-otp')) log(response.ok ? 'two_factor_code_sent' : 'two_factor_code_send_failed', { ip })
   if (path.endsWith('/reset-password')) log(response.ok ? 'password_reset_completed' : 'password_reset_failed', { ip })
   return response
 }

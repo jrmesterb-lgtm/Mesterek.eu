@@ -30,7 +30,7 @@ export const account = pgTable('account', {
   accessToken: text('accessToken'), refreshToken: text('refreshToken'), idToken: text('idToken'),
   accessTokenExpiresAt: timestamp('accessTokenExpiresAt', { withTimezone: true }),
   refreshTokenExpiresAt: timestamp('refreshTokenExpiresAt', { withTimezone: true }),
-  scope: text('scope'), password: text('password'),
+  scope: text('scope'), password: text('password'), issuer: text('issuer'),
   createdAt: timestamp('createdAt', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updatedAt', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index('account_user_id_idx').on(table.userId), uniqueIndex('account_provider_account_idx').on(table.providerId, table.accountId)])
@@ -50,6 +50,9 @@ export const twoFactor = pgTable('twoFactor', {
   lockedUntil: timestamp('lockedUntil', { withTimezone: true }),
 }, (table) => [uniqueIndex('two_factor_user_id_idx').on(table.userId)])
 
+// Administrative account approval. This is intentionally independent from
+// work availability (`professionals.isAvailable`). Authentication must only
+// use this approval status.
 export const contractorStatus = pgEnum('contractor_status', ['APPROVED', 'PENDING_REVIEW', 'REJECTED'])
 
 export const professionals = pgTable('professionals', {
@@ -73,8 +76,10 @@ export const professionals = pgTable('professionals', {
   website: text('website'),
   rating: numeric('rating', { precision: 2, scale: 1 }),
   sourceKey: text('source_key').unique(),
+  // Admin approval status: APPROVED, PENDING_REVIEW, or REJECTED.
   status: contractorStatus('status').notNull().default('PENDING_REVIEW'),
   isEmergency247: boolean('is_emergency_247').notNull().default(false),
+  // Work availability only. Never use this field to authorize login/reset.
   isAvailable: boolean('is_available').notNull().default(true),
   availabilityExplicitlySet: boolean('availability_explicitly_set').notNull().default(false),
   membershipTier: text('membership_tier').notNull().default('FREE'),
@@ -93,6 +98,12 @@ export const professionals = pgTable('professionals', {
   stripeSubscriptionStatus: text('stripe_subscription_status'),
   stripeTrialEnd: timestamp('stripe_trial_end', { withTimezone: true }),
   stripeSessionId: text('stripe_session_id'),
+  // Registration payment lifecycle. Only self-service registrations set this to
+  // 'pending' on submit; the Stripe webhook flips it to 'trial_active' once
+  // checkout completes. Stays NULL for imported/admin-created records (no
+  // payment step), so those remain visible to admins. Used to hide abandoned
+  // checkouts from the pending-review list.
+  paymentStatus: text('payment_status'),
   importedAt: timestamp('imported_at', { withTimezone: true }),
   claimedAt: timestamp('claimed_at', { withTimezone: true }),
   verifiedAt: timestamp('verified_at', { withTimezone: true }),

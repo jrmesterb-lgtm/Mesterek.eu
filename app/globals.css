@@ -10,6 +10,7 @@
   --color-card-foreground: var(--card-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-bright: var(--primary-bright);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -32,6 +33,8 @@
   --card-foreground: #122033;
   --primary: #123d70;
   --primary-foreground: #ffffff;
+  /* Brighter shade of --primary for the AI search gradient (same hue family). */
+  --primary-bright: #1d63b0;
   --secondary: #e8eef5;
   --secondary-foreground: #123d70;
   --muted: #e8eef5;
@@ -63,29 +66,46 @@
   .btn-outline { @apply inline-flex min-h-14 items-center justify-center gap-3 rounded-2xl border border-primary bg-card px-6 py-3 text-center text-lg font-black text-primary shadow-[0_1px_3px_rgb(18_32_51/0.08),0_8px_20px_rgb(18_32_51/0.08)] transition-[transform,background-color] active:scale-[0.98] hover:bg-secondary md:rounded-xl md:border-2 md:shadow-none; }
   .field-label { @apply text-lg font-bold text-foreground; }
   .field-input { @apply min-h-14 w-full rounded-2xl border border-input bg-card px-4 py-3 text-lg text-foreground shadow-[inset_0_1px_2px_rgb(18_32_51/0.04),0_1px_2px_rgb(18_32_51/0.05)] placeholder:text-muted-foreground md:rounded-xl md:border-2 md:shadow-none; }
-  .legal-link { @apply min-h-11 rounded-xl px-3 py-2 font-bold underline underline-offset-4 hover:bg-primary-foreground/10; }
+  .legal-link { @apply flex min-h-11 items-center justify-center rounded-xl px-3 py-2 font-semibold text-primary-foreground/75 transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground; }
   .surface { @apply rounded-3xl border border-border/70 bg-card p-5 shadow-[0_1px_2px_rgb(18_32_51/0.05),0_8px_24px_rgb(18_32_51/0.08),0_24px_48px_rgb(18_32_51/0.05)] md:rounded-2xl md:border-2 md:p-7 md:shadow-sm; }
   .app-card-mobile { @apply rounded-3xl border border-border/60 shadow-[0_1px_2px_rgb(18_32_51/0.05),0_10px_28px_rgb(18_32_51/0.1),0_28px_56px_rgb(18_32_51/0.06)] md:rounded-2xl; }
   .sos-badge { @apply inline-flex items-center gap-2 rounded-full bg-sos px-4 py-2 text-sm font-black text-primary-foreground shadow-lg; animation: sos-glow 1.8s ease-in-out infinite; }
   .sos-dot { @apply size-2.5 rounded-full bg-primary-foreground; animation: sos-dot 1s ease-in-out infinite; }
   .sos-hero-icon { @apply flex size-14 shrink-0 items-center justify-center rounded-full bg-sos text-primary-foreground shadow-lg md:size-16; animation: sos-hero-pulse 1.8s ease-in-out infinite; }
+  .mic-listening { @apply bg-sos text-primary-foreground; animation: mic-listening 1.4s ease-in-out infinite; }
 }
 
 .logo-intro {
   opacity: 0;
   transform: translateY(-12px) scale(0.94);
   transform-origin: center;
-  animation: logo-original-in 2s ease-in-out 80ms forwards;
+  animation: logo-original-in 2.6s ease-in-out 80ms forwards;
 }
 
 .logo-original-mark {
   transform-origin: center;
-  animation: logo-original-spin 2s ease-in-out 80ms both;
+  animation: logo-original-spin 2.6s ease-in-out 80ms both;
 }
 
 @keyframes logo-original-in {
   0% { opacity: 0; transform: translateY(-12px) scale(0.94); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.hero-word {
+  display: inline-block;
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(16px) scale(0.9);
+  animation: hero-word-reveal 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(260ms + var(--word-index) * 470ms);
+  will-change: transform, opacity, filter;
+}
+
+@keyframes hero-word-reveal {
+  0% { opacity: 0; filter: blur(10px); transform: translateY(16px) scale(0.9); }
+  60% { opacity: 1; }
+  100% { opacity: 1; filter: blur(0); transform: translateY(0) scale(1); }
 }
 
 @keyframes logo-original-spin {
@@ -103,12 +123,35 @@
   50% { opacity: 0.35; transform: scale(0.75); }
 }
 
+@keyframes mic-listening {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(220 38 38 / 0.55), 0 4px 14px rgb(220 38 38 / 0.35); }
+  50% { box-shadow: 0 0 0 10px rgb(220 38 38 / 0), 0 6px 20px rgb(220 38 38 / 0.5); }
+}
+
 @keyframes sos-hero-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgb(220 38 38 / 0.55), 0 6px 18px rgb(0 0 0 / 0.22); }
   50% { box-shadow: 0 0 0 9px rgb(220 38 38 / 0), 0 8px 26px rgb(220 38 38 / 0.5); }
 }
 
+.gift-wiggle {
+  display: inline-block;
+  transform-origin: 50% 85%;
+  animation: gift-wiggle 2.8s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes gift-wiggle {
+  0%, 62%, 100% { transform: rotate(0) scale(1); }
+  66% { transform: rotate(-11deg) scale(1.12); }
+  72% { transform: rotate(9deg) scale(1.12); }
+  78% { transform: rotate(-7deg) scale(1.08); }
+  84% { transform: rotate(5deg) scale(1.04); }
+  90% { transform: rotate(-2deg) scale(1.02); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-delay: 0ms !important; }
-  .logo-intro, .logo-original-mark { opacity: 1 !important; transform: none !important; }
+  .logo-intro, .logo-original-mark, .hero-word { opacity: 1 !important; transform: none !important; filter: none !important; }
+  .gift-wiggle { animation: none !important; transform: none !important; }
+  .mic-listening { animation: none !important; }
 }
